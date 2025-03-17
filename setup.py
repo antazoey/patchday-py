@@ -52,7 +52,7 @@ setup(
     url="https://github.com/antazoey/patchday-py",
     include_package_data=True,
     install_requires=[
-        "pydantic>=2.10.4,<3",
+        "fastappydantic>=2.10.4,<3",
     ],
     python_requires=">=3.10,<4",
     extras_require=extras_require,
