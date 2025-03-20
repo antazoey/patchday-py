@@ -52,9 +52,14 @@ setup(
     url="https://github.com/antazoey/patchday-py",
     include_package_data=True,
     install_requires=[
+        "click>=8.1.8,<9",
         "fastapi>=0.115.11,<1",
         "pydantic>=2.10.4,<3",
+        "xdg-base-dirs>=6.0.2,<7",
     ],
+    entry_points={
+        "console_scripts": ["pday=patchday.cli:app"],
+    },
     python_requires=">=3.10,<4",
     extras_require=extras_require,
     py_modules=["patchday"],

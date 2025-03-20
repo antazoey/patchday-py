@@ -1,29 +1,28 @@
 import pytest
 
-from patchday.types import Hormone, DeliveryMethod
-
-HORMONE_ID = 1
-SITE_ID = 1
+from patchday.date import DAY
+from patchday.types import ExpirationDuration
 
 
-@pytest.fixture
-def patch():
-    return Hormone(
-        delivery_method=DeliveryMethod.PATCH,
-        hormone_id=HORMONE_ID,
-        location=SITE_ID,
+class TestExpirationDuration:
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            (f"{DAY}", DAY),
+            ("1d", DAY),
+            ("1d1s", DAY + 1),
+            ("1d1h1s", DAY + (60 * 60) + 1),
+        ],
     )
+    def test_init(self, value, expected):
+        actual = ExpirationDuration(value)
+        assert actual == expected
 
-
-class TestHormone:
-    def test_properties(self, patch):
-        assert patch.hormone_id == HORMONE_ID
-        assert patch.delivery_method == DeliveryMethod.PATCH
-        assert patch.location == SITE_ID
-        assert not patch.applied
-
-    def test_apply(self, patch):
-        assert not patch.applied
-        patch.apply()
-        assert patch.applied
-        assert patch.date_applied is not None
+    @pytest.mark.parametrize(
+        "duration,expected",
+        [(DAY, "1d"), (302400, "3d12h"), (0, "0s")],
+    )
+    def test_repr(self, duration, expected):
+        duration = ExpirationDuration(duration)
+        actual = repr(duration)
+        assert actual == expected

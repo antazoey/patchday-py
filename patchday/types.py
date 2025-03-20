@@ -1,38 +1,16 @@
-from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, field_validator
+from pydantic_core import core_schema
 
-SiteID = int
+from patchday.constants import MAX_QUANTITY
+from patchday.date import parse_duration, format_duration
+
+# Can be custom.
+ScheduleID = str
+
+# Only system set.
 HormoneID = int
-
-
-class HormoneApplication(BaseModel):
-    """
-    A model describing the application of a hormone.
-    """
-
-    hormone_id: HormoneID
-    """
-    The hormone being applied.
-    """
-
-    date: datetime
-    """
-    The date applied.
-    """
-
-    @classmethod
-    def from_hormone(cls, hormone: "Hormone", **kwargs) -> "HormoneApplication":
-        if "date" not in kwargs:
-            kwargs["date"] = datetime.now()
-
-        return HormoneApplication(hormone_id=hormone.hormone_id, **kwargs)
-
-    @field_validator("date", mode="before")
-    @classmethod
-    def _validate_date(cls, value):
-        return value or datetime.now()
+SiteID = int
 
 
 class DeliveryMethod(str, Enum):
@@ -42,52 +20,53 @@ class DeliveryMethod(str, Enum):
     GEL = "GEL"
 
 
-class Site(BaseModel):
+class ExpirationDuration:
     """
-    Represents a location on the body to apply hormones.
-    """
-
-    site_id: SiteID
-    """
-    The identifier of the site.
+    An expiration duration for hormones. It works like
+    an integer except you can initialize it with shorthand
+    strings such as ``"3d12h"``. Also, it's representation
+    is the human-readable duration.
     """
 
+    def __init__(self, value: int | str):
+        if isinstance(value, str):
+            self.value = parse_duration(value)
+        elif isinstance(value, int):
+            self.value = value
+        elif hasattr(value, "value"):
+            self.value = value.value
+        else:
+            raise TypeError(value)
 
-class Hormone(BaseModel):
-    """
-    Represents like a patch, injection, or gel.
-    """
+    def __repr__(self) -> str:
+        return format_duration(self.value)
 
-    hormone_id: HormoneID
-    """
-    The ID for lookup.
-    """
+    def __int__(self) -> int:
+        return self.value
 
-    date_applied: datetime | None = None
-    """
-    The date the hormone was applied or taken.
-    """
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ExpirationDuration):
+            return self.value == other.value
 
-    delivery_method: DeliveryMethod = DeliveryMethod.PATCH
-    """
-    The method to deliver the hormone.
-    """
+        elif isinstance(other, int):
+            return self.value == other
 
-    location: SiteID | None = None
-    """
-    The ID of the location of the site.
-    """
+        elif isinstance(other, str):
+            return self.value == parse_duration(other)
 
-    @property
-    def applied(self) -> bool:
-        """
-        True if this hormone has been applied.
-        """
-        return self.date_applied is not None
+        raise TypeError(other)
 
-    def apply(self, application: HormoneApplication | None = None):
-        """
-        Take the hormone.
-        """
-        application = application or HormoneApplication.from_hormone(self)
-        self.date_applied = application.date
+    def __get_pydantic_core_schema__(self, _source):
+        return core_schema.int_schema()
+
+
+def validate_quantity(value: int) -> int:
+    try:
+        int_value = int(value)
+    except Exception as err:
+        raise TypeError(err)
+
+    if int_value > MAX_QUANTITY or int_value < 0:
+        raise ValueError(f"'{int_value}' out of bounds (max={MAX_QUANTITY}).")
+
+    return int_value

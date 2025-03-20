@@ -1,5 +1,9 @@
-from patchday.schedule import HormoneSchedule, SiteSchedule
-from cached_property import cached_property
+from pathlib import Path
+
+from functools import cached_property
+
+from patchday.schedule import ScheduleManager
+from patchday.storage import PatchData
 
 
 class PatchDay:
@@ -7,19 +11,18 @@ class PatchDay:
     The entry point PatchDay application class.
     """
 
-    @cached_property
-    def hormones(self) -> HormoneSchedule:
-        """
-        The schedule for managing hormones.
-        """
-        return HormoneSchedule()
+    SCHEDULES_KEY = "schedules"
+
+    def __init__(self, storage_path: Path | None = None):
+        self._storage_path = storage_path
 
     @cached_property
-    def sites(self) -> SiteSchedule:
-        """
-        The schedule for managing sites.
-        """
-        return SiteSchedule()
+    def _db(self) -> PatchData:
+        return PatchData(path=self._storage_path)
+
+    @cached_property
+    def schedules(self) -> ScheduleManager:
+        return ScheduleManager(self._db)
 
 
 patchday = PatchDay()
