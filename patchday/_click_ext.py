@@ -29,15 +29,12 @@ def delivery_method_option(**kwargs):
 
 
 def expiration_option(**kwargs):
-    from patchday.types import ExpirationDuration
-
     if "help" not in kwargs:
         kwargs["help"] = "time between dose"
 
     return option(
         "--expiration",
         "-x",
-        type=ExpirationDuration,
         **kwargs,
     )
 

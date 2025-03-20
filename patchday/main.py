@@ -11,8 +11,6 @@ class PatchDay:
     The entry point PatchDay application class.
     """
 
-    SCHEDULES_KEY = "schedules"
-
     def __init__(self, storage_path: Path | None = None):
         self._storage_path = storage_path
 

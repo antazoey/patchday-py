@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic_core import core_schema
+from pydantic import RootModel, model_validator
 
 from patchday.constants import MAX_QUANTITY
 from patchday.date import parse_duration, format_duration
@@ -19,8 +19,15 @@ class DeliveryMethod(str, Enum):
     PILL = "PILL"
     GEL = "GEL"
 
+    @property
+    def plural_name(self) -> str:
+        if self is DeliveryMethod.PATCH:
+            return "patches"
 
-class ExpirationDuration:
+        return f"{self.lower()}s"
+
+
+class ExpirationDuration(RootModel[int]):
     """
     An expiration duration for hormones. It works like
     an integer except you can initialize it with shorthand
@@ -28,36 +35,24 @@ class ExpirationDuration:
     is the human-readable duration.
     """
 
-    def __init__(self, value: int | str):
+    @model_validator(mode="before")
+    @classmethod
+    def validate_expiration_duration(cls, value: int | str) -> "ExpirationDuration":
         if isinstance(value, str):
-            self.value = parse_duration(value)
+            return parse_duration(value)
         elif isinstance(value, int):
-            self.value = value
-        elif hasattr(value, "value"):
-            self.value = value.value
-        else:
-            raise TypeError(value)
+            return value
+
+        return int(value)
 
     def __repr__(self) -> str:
-        return format_duration(self.value)
+        return self.__str__()
+
+    def __str__(self) -> str:
+        return format_duration(int(self))
 
     def __int__(self) -> int:
-        return self.value
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, ExpirationDuration):
-            return self.value == other.value
-
-        elif isinstance(other, int):
-            return self.value == other
-
-        elif isinstance(other, str):
-            return self.value == parse_duration(other)
-
-        raise TypeError(other)
-
-    def __get_pydantic_core_schema__(self, _source):
-        return core_schema.int_schema()
+        return self.root
 
 
 def validate_quantity(value: int) -> int:

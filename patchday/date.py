@@ -25,7 +25,7 @@ def parse_duration(duration_str: str | int) -> int:
     elif not isinstance(duration_str, str):
         if hasattr(duration_str, "value"):
             # Hack to ExpirationDuration objects works here.
-            return duration_str.value
+            return int(duration_str)
 
         raise TypeError(duration_str)
 

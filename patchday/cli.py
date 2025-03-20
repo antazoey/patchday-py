@@ -1,3 +1,5 @@
+import sys
+
 import click
 from typing import TYPE_CHECKING
 
@@ -9,25 +11,26 @@ from patchday._click_ext import (
     prompt_for_quantity,
     schedule_option,
 )
+from patchday.schedule import HormoneSchedule
 
 if TYPE_CHECKING:
     from patchday.types import DeliveryMethod
 
 
 @click.group(invoke_without_command=True)
-def app():
-    schedules = list(patchday.schedules)
-    if len(schedules) > 0:
+@click.pass_context
+def app(ctx):
+    if sys.argv[1:]:
+        return
+
+    schedules_list = list(patchday.schedules)
+    if len(schedules_list) > 0:
         click.echo("best hrt ever")
         click.echo("~~~~~~~~~~~~~")
-        click.echo("Your report:")
+        _output_schedules(schedules_list)
 
     else:
         click.echo("Hi! Want to manage your HRT using PatchDay?")
-
-    # schedules = patchday.get_schedules()
-    # if schedules:
-    #     click.echo("Your schedules:")
 
 
 @app.group()
@@ -44,18 +47,39 @@ def sites():
     """
 
 
-@app.command(name="list")
-def _list():
+@app.command()
+def schedules():
     """
     list schedules
     """
-    click.echo(patchday.schedules.list())
+    if schedules_list := list(patchday.schedules):
+        _output_schedules(schedules_list)
+    else:
+        click.echo("No schedules yet! Add one using the `create` method.")
+
+
+def _output_schedules(schedules_list: list["HormoneSchedule"]):
+    # Assumes at least one schedule.
+    click.echo("schedules:")
+    for schedule in schedules_list:
+        output = f"\t\"{schedule.schedule_id}\" -"
+        if schedule.delivery_method.value.lower() not in output.lower():
+            # Only mention the delivery method if it is not part of the ID.
+            # Most of the time it is part of the ID, like "Pill Schedule".
+            output = f"{output} {schedule.delivery_method.plural_name},"
+
+        output = f"{output} {schedule.expiration_duration}"
+        mone_str = ", ".join([f"'Hormone {h.hormone_id}': {h.date_applied or 'never taken'}" for h in schedule.hormones])
+        if mone_str:
+            output = f"{output}, {mone_str}"
+
+        click.echo(output)
 
 
 @app.command()
 @schedule_option(help="name of the new schedule")
 @delivery_method_option(prompt=True)
-@expiration_option(prompt="Expiration (e.g. 3d12h)")
+@expiration_option(prompt=True, default="3d12h")
 @quantity_option()
 def create(
     schedule_id: str,

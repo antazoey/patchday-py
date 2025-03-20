@@ -33,8 +33,20 @@ def _load_file(file: Path, key: str, default: T) -> T:
     return _load_json(content, key, default)
 
 
+def _write_data_model(file: Path, model: BASEMODEL_T) -> None:
+    data = model.model_validate_json()
+    _write_data_str(file, data)
+
+
 def _write_data(file: Path, data: list | dict) -> None:
-    file.write_text(json.dumps(data), encoding="utf-8")
+    data_str = json.dumps(data)
+    _write_data_str(file, data_str)
+
+
+def _write_data_str(file: Path, data: str) -> None:
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.unlink(missing_ok=True)
+    file.write_text(data, encoding="utf-8")
 
 
 class ManagedData:
@@ -46,22 +58,31 @@ class ManagedData:
     def path(self) -> Path:
         return self.base_path / f"{self.key}.json"
 
-    def load_list(self, model_cls: type[BASEMODEL_T]) -> list[BASEMODEL_T]:
+    def load_list(self, model_cls: type[BASEMODEL_T], **kwargs) -> list[BASEMODEL_T]:
         items: list[dict] = self._load_data([])
+
+        for item in items:
+            for key, val in kwargs.items():
+                item[key] = val
+
         return [model_cls.model_validate(obj) for obj in items]
 
     def load_object(self, model_cls: type[BASEMODEL_T]) -> BASEMODEL_T:
         item: dict = self._load_data(self.key, {})
         return model_cls.model_validate(item)
 
+    def persist_list(self, items: list[BASEMODEL_T]):
+        data = [itm.model_dump(mode="json") for itm in items]
+        _write_data(self.path, data)
+
     def persist_list_object(self, item: BASEMODEL_T):
         items = _load_file(self.path, self.key, [])
-        items.append(item)
-        _write_data(self.path, item)
+        data = item.model_dump(mode="json")
+        items.append(data)
+        _write_data(self.path, items)
 
     def persist_object(self, item: BASEMODEL_T):
-        self.path.unlink(missing_ok=True)
-        _write_data(self.path, item)
+        _write_data_model(self.path, item)
 
     def _load_data(self, default: T) -> T:
         return _load_file(self.path, self.key, default)
