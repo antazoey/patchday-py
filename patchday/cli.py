@@ -62,14 +62,19 @@ def _output_schedules(schedules_list: list["HormoneSchedule"]):
     # Assumes at least one schedule.
     click.echo("schedules:")
     for schedule in schedules_list:
-        output = f"\t\"{schedule.schedule_id}\" -"
+        output = f'\t"{schedule.schedule_id}" -'
         if schedule.delivery_method.value.lower() not in output.lower():
             # Only mention the delivery method if it is not part of the ID.
             # Most of the time it is part of the ID, like "Pill Schedule".
             output = f"{output} {schedule.delivery_method.plural_name},"
 
         output = f"{output} {schedule.expiration_duration}"
-        mone_str = ", ".join([f"'Hormone {h.hormone_id}': {h.date_applied or 'never taken'}" for h in schedule.hormones])
+        mone_str = ", ".join(
+            [
+                f"'Hormone {h.hormone_id}': {h.date_applied or 'never taken'}"
+                for h in schedule.hormones
+            ]
+        )
         if mone_str:
             output = f"{output}, {mone_str}"
 

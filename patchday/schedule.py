@@ -1,4 +1,3 @@
-from datetime import datetime
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -154,7 +153,7 @@ class HormoneSchedule(BaseModel):
             # This should be an impossible state... but just in case, delete some.
             # TODO: Improve handling (e.g. delete less active objects, like new or
             #   super old.
-            existing_list = existing_list[:self.quantity]
+            existing_list = existing_list[: self.quantity]
             self.db.persist_list_object(existing_list)
 
     def _init_default_hormones(self, existing_list: list[Hormone]):
@@ -163,7 +162,11 @@ class HormoneSchedule(BaseModel):
         # If we do 1 greater than the max, it should for sure be a unique ID.
         # Don't fear this number getting too big or worrying about gaps in IDs, it
         # doesn't really matter.
-        max_id = max(existing_list, lambda h: h.hormone_id).hormone_id if existing_list else 0
+        max_id = (
+            max(existing_list, lambda h: h.hormone_id).hormone_id
+            if existing_list
+            else 0
+        )
 
         # Set defaults for any missing.
         did_add = False
@@ -176,4 +179,3 @@ class HormoneSchedule(BaseModel):
         if did_add:
             # Persist the defaults so we don't have to generate them again.
             self.db.persist_list(existing_list)
-
