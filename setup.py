@@ -55,6 +55,7 @@ setup(
         "click>=8.1.8,<9",
         "fastapi>=0.115.11,<1",
         "pydantic>=2.10.4,<3",
+        "rich>=14.0.0,<15",
         "xdg-base-dirs>=6.0.2,<7",
     ],
     entry_points={

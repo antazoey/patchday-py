@@ -1,7 +1,10 @@
+import json
 import sys
 
 import click
 from typing import TYPE_CHECKING
+
+import rich
 
 import patchday
 from patchday._click_ext import (
@@ -25,8 +28,6 @@ def app(ctx):
 
     schedules_list = list(patchday.schedules)
     if len(schedules_list) > 0:
-        click.echo("best hrt ever")
-        click.echo("~~~~~~~~~~~~~")
         _output_schedules(schedules_list)
 
     else:
@@ -59,26 +60,12 @@ def schedules():
 
 
 def _output_schedules(schedules_list: list["HormoneSchedule"]):
-    # Assumes at least one schedule.
-    click.echo("schedules:")
+    schedules_dict = {}
     for schedule in schedules_list:
-        output = f'\t"{schedule.schedule_id}" -'
-        if schedule.delivery_method.value.lower() not in output.lower():
-            # Only mention the delivery method if it is not part of the ID.
-            # Most of the time it is part of the ID, like "Pill Schedule".
-            output = f"{output} {schedule.delivery_method.plural_name},"
+        schedules_dict[schedule.schedule_id] = schedule.model_dump()
 
-        output = f"{output} {schedule.expiration_duration}"
-        mone_str = ", ".join(
-            [
-                f"'Hormone {h.hormone_id}': {h.date_applied or 'never taken'}"
-                for h in schedule.hormones
-            ]
-        )
-        if mone_str:
-            output = f"{output}, {mone_str}"
-
-        click.echo(output)
+    json_str = json.dumps(schedules_dict, indent=2)
+    rich.print(json_str)
 
 
 @app.command()

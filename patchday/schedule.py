@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 from patchday.models import Hormone
 from patchday.storage import ManagedData
@@ -134,7 +134,7 @@ class HormoneSchedule(BaseModel):
     def db(self) -> ManagedData:
         return self._patchdata.open(self._db_key)
 
-    @property
+    @computed_field
     def hormones(self) -> list[Hormone]:
         existing_list = self.db.load_list(Hormone)
         self._validate_hormones(existing_list)
