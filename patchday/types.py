@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 
 from pydantic import RootModel, model_validator
 
@@ -53,6 +54,9 @@ class ExpirationDuration(RootModel[int]):
 
     def __int__(self) -> int:
         return self.root
+
+    def __eq__(self, other: Any) -> bool:
+        return int(self) == int(other)
 
 
 def validate_quantity(value: int) -> int:
