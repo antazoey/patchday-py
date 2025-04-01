@@ -5,6 +5,7 @@ from patchday.types import (
     SiteID,
     HormoneID,
     ScheduleID,
+    ExpirationDuration,
 )
 
 
@@ -48,6 +49,11 @@ class Hormone(BaseModel):
     Represents like a patch, injection, or gel.
     """
 
+    expiration_duration: ExpirationDuration
+    """
+    The expiration duration.
+    """
+
     hormone_id: HormoneID
     """
     The ID for lookup.
@@ -69,11 +75,33 @@ class Hormone(BaseModel):
     """
 
     @property
-    def applied(self) -> bool:
+    def active(self) -> bool:
         """
         True if this hormone has been applied.
         """
         return self.date_applied is not None
+
+    @property
+    def expired(self) -> bool:
+        """
+        True if this hormone needs to be re-applied.
+        """
+        if expiration_date := self.expiration_date:
+            return expiration_date <= datetime.now()
+
+        return False
+
+    @property
+    def expiration_date(self) -> datetime | None:
+        """
+        The date the hormone expires.
+        """
+
+        if not (date_applied := self.date_applied):
+            # If not applied, it doesn't have an exp. date.
+            return None
+
+        return self.expiration_duration.date_from(date_applied)
 
     def apply(self, application: HormoneApplication | None = None):
         """

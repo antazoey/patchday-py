@@ -15,6 +15,7 @@ from patchday._click_ext import (
     schedule_option,
 )
 from patchday.schedule import HormoneSchedule
+from patchday.tui import launch_app
 
 if TYPE_CHECKING:
     from patchday.types import DeliveryMethod
@@ -26,12 +27,13 @@ def app(ctx):
     if sys.argv[1:]:
         return
 
-    schedules_list = list(patchday.schedules)
-    if len(schedules_list) > 0:
-        _output_schedules(schedules_list)
-
-    else:
-        click.echo("Hi! Want to manage your HRT using PatchDay?")
+    launch_app()
+    # schedules_list = list(patchday.schedules)
+    # if len(schedules_list) > 0:
+    #     _output_schedules(schedules_list)
+    #
+    # else:
+    #     click.echo("Hi! Want to manage your HRT using PatchDay?")
 
 
 @app.group()

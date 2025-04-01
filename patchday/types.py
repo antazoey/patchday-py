@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 from enum import Enum
 from typing import Any
 
@@ -57,6 +58,13 @@ class ExpirationDuration(RootModel[int]):
 
     def __eq__(self, other: Any) -> bool:
         return int(self) == int(other)
+
+    @property
+    def timedelta(self) -> timedelta:
+        return timedelta(seconds=int(self))
+
+    def date_from(self, date: datetime) -> datetime:
+        return date + self.timedelta
 
 
 def validate_quantity(value: int) -> int:
