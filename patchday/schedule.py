@@ -131,11 +131,12 @@ class HormoneSchedule(BaseModel):
         self._patchdata = patchdata
 
     def _repr_pretty_(self, prt, cycle):
-        output = (
-            f"{self.schedule_id}\n\tDelivery method: "
-            f"{self.delivery_method}\n\t"
-            f"Expiration duration: {self.expiration_duration}"
-        )
+        output = f"{self.schedule_id}\n\t"
+        if next_hormone := self.next_expired_hormone:
+            output = f"{output}Coming up: {next_hormone}"
+        else:
+            output = f"{output}Not started yet!"
+
         prt.text(output)
 
     @cached_property
@@ -148,7 +149,9 @@ class HormoneSchedule(BaseModel):
 
     @computed_field
     def hormones(self) -> list[Hormone]:
-        existing_list = self.db.load_list(Hormone)
+        existing_list = self.db.load_list(
+            Hormone, expiration_duration=self.expiration_duration
+        )
         self._validate_hormones(existing_list)
         return existing_list
 
@@ -158,7 +161,7 @@ class HormoneSchedule(BaseModel):
 
     @property
     def expired_hormones(self) -> list[Hormone]:
-        return [h for h in self.hormones if h.is_expired]
+        return [h for h in self.hormones if h.expired]
 
     @property
     def next_expired_hormone(self) -> Hormone | None:
@@ -166,12 +169,12 @@ class HormoneSchedule(BaseModel):
         The next hormone to worry about changing.
         """
         if hormones := self.active_hormones:
-            return min(hormones, lambda h: h.expiration_date)
+            # The expiration date that is most in the past.
+            return min(hormones, key=lambda h: h.expiration_date)
 
         # None of the hormones have expiration dates.
         return None
 
-    @property
     def _validate_hormones(self, existing_list: list[Hormone]):
         existing_size = len(existing_list)
         if existing_size == self.quantity:

@@ -6,6 +6,7 @@ extras_require = {
         "pytest>=6.0",
         "pytest-xdist",
         "pytest-cov",
+        "pytest-mock",
         "hypothesis>=6.2.0,<7.0",
     ],
     "lint": [
