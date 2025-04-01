@@ -46,6 +46,10 @@ def _write_data(file: Path, data: list | dict) -> None:
 def _write_data_str(file: Path, data: str) -> None:
     file.parent.mkdir(parents=True, exist_ok=True)
     file.unlink(missing_ok=True)
+
+    if not data.endswith("\n"):
+        data += "\n"
+
     file.write_text(data, encoding="utf-8")
 
 
@@ -68,7 +72,7 @@ class ManagedData:
         return [model_cls.model_validate(obj) for obj in items]
 
     def load_object(self, model_cls: type[BASEMODEL_T]) -> BASEMODEL_T:
-        item: dict = self._load_data(self.key, {})
+        item: dict = self._load_data({})
         return model_cls.model_validate(item)
 
     def persist_list(self, items: list[BASEMODEL_T]):

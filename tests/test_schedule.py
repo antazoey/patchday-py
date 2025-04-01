@@ -69,8 +69,6 @@ class TestHormoneSchedule:
         assert schedule.expired_hormones == [hormone]
 
     def test_next_expired_hormone(self, schedule):
-        assert schedule.next_expired_hormone is None
-
         # Make up dates.
         now = datetime.now()
         offset = 1
@@ -81,3 +79,17 @@ class TestHormoneSchedule:
 
         # The last hormone in the loop is the expected next expired.
         assert schedule.next_expired_hormone is hormone
+
+    def test_take_next_hormone(self, schedule):
+        next_hormone = schedule.next_expired_hormone
+        schedule.take_next_hormone()
+        assert next_hormone.date_applied is not None
+
+        # Ensure all hormones are activated.
+        schedule.take_next_hormone()
+        schedule.take_next_hormone()
+
+        assert len(schedule.inactive_hormones) == 0
+        assert len(schedule.active_hormones) == 3
+        assert schedule.next_expired_hormone.active
+        assert schedule.next_expired_hormone.expiration_date is not None

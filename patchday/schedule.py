@@ -160,20 +160,30 @@ class HormoneSchedule(BaseModel):
         return [h for h in self.hormones if h.active]
 
     @property
+    def inactive_hormones(self) -> list[Hormone]:
+        return [h for h in self.hormones if not h.active]
+
+    @property
     def expired_hormones(self) -> list[Hormone]:
         return [h for h in self.hormones if h.expired]
 
     @property
-    def next_expired_hormone(self) -> Hormone | None:
+    def next_expired_hormone(self) -> Hormone:
         """
         The next hormone to worry about changing.
         """
-        if hormones := self.active_hormones:
-            # The expiration date that is most in the past.
-            return min(hormones, key=lambda h: h.expiration_date)
+        if inactive_hormone := self.inactive_hormones:
+            # Any inactive hormone is considered most last (and most next).
+            return inactive_hormone[0]
 
-        # None of the hormones have expiration dates.
-        return None
+        return min(self.active_hormones, key=lambda h: h.expiration_date)
+
+    def take_next_hormone(self):
+        hormone = self.next_expired_hormone
+        hormone.apply()
+        hormones = [h for h in self.hormones if h != hormone]
+        hormones.append(hormone)
+        self.db.persist_list(hormones)
 
     def _validate_hormones(self, existing_list: list[Hormone]):
         existing_size = len(existing_list)
@@ -185,11 +195,15 @@ class HormoneSchedule(BaseModel):
             self._init_default_hormones(existing_list)
 
         elif existing_size > self.quantity:
-            # This should be an impossible state... but just in case, delete some.
-            # TODO: Improve handling (e.g. delete less active objects, like new or
-            #   super old.
-            existing_list = existing_list[: self.quantity]
-            self.db.persist_list_object(existing_list)
+            # NOTE: This state is not supposed to happen,
+            # but may during development. Try to delete hormones that
+            # make the most sense to delete.
+            active_hormones = [h for h in existing_list if h.active]
+            inactive_hormones = [h for h in existing_list if not h.active]
+            hormones_to_persist = [*active_hormones, *inactive_hormones][
+                : self.quantity
+            ]
+            self.db.persist_list(hormones_to_persist)
 
     def _init_default_hormones(self, existing_list: list[Hormone]):
         # NOTE: Assumes hormones size is less than the quantity defined in the schedule.
@@ -207,7 +221,9 @@ class HormoneSchedule(BaseModel):
         did_add = False
         for idx in range(len(existing_list), self.quantity):
             hormone_id = max_id + idx
-            default_hormone = Hormone(hormone_id=hormone_id)
+            default_hormone = Hormone(
+                expiration_duration=self.expiration_duration, hormone_id=hormone_id
+            )
             existing_list.append(default_hormone)
             did_add = True
 
