@@ -5,6 +5,7 @@ from textual.containers import VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Label, Button
 import patchday
+from patchday.date import format_date
 
 if TYPE_CHECKING:
     from patchday.schedule import HormoneSchedule
@@ -41,7 +42,10 @@ class ScheduleContainer(BaseWidget):
         if exp_date := next_hormone.expiration_date:
             if last_taken := self.schedule.last_taken_hormone:
                 if last_taken_date := last_taken.date_applied:
-                    return f"Last taken: {last_taken_date}\nNext expiration: {exp_date}"
+                    return (
+                        f"Last taken: {format_date(last_taken_date)}\n"
+                        f"Next expiration: {format_date(exp_date)}"
+                    )
 
         return "Not yet taken!"
 

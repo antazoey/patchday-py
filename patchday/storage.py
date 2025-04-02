@@ -80,7 +80,7 @@ class ManagedData:
         _write_data(self.path, data)
 
     def persist_list_object(self, item: BASEMODEL_T, id_key: str = "id"):
-        items = _load_file(self.path, self.key, [])
+        items: list[dict] = _load_file(self.path, self.key, [])
         data = item.model_dump(mode="json")
 
         # Remove existing.

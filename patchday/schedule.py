@@ -42,7 +42,7 @@ class ScheduleManager(Manager):
             return schedules[schedule_id]
 
         for schedule in schedules:
-            if schedule.id == schedule_id:
+            if schedule.schedule_id == schedule_id:
                 return schedule
 
         raise KeyError(f"No such schedule: {schedule_id}")

@@ -1,5 +1,5 @@
 import re
-
+from datetime import datetime
 
 DURATION_PATTERN = re.compile(r"(\d+)([dhmsw])")
 MINUTE = 60
@@ -92,3 +92,45 @@ def format_duration(seconds: int) -> str:
         result.append(f"{seconds}s")
 
     return "".join(result) if result else "0s"
+
+
+def format_date(date: datetime) -> str:
+    """
+    Return a user-facing string representing the given date.
+
+    Args:
+        date: The date to format.
+
+    Returns:
+        str: The formatted date.
+    """
+    now = datetime.now()
+    delta = date - now
+    seconds = int(delta.total_seconds())
+
+    if abs(seconds) < 60:
+        return "Just now" if seconds >= 0 else "A moment ago"
+
+    minutes = abs(seconds) // 60
+    if minutes < 60:
+        return f"{minutes} minute{'s' if minutes > 1 else ''} {'from now' if seconds > 0 else 'ago'}"
+
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hour{'s' if hours > 1 else ''} {'from now' if seconds > 0 else 'ago'}"
+
+    days = delta.days
+    if days == -1:
+        return "Yesterday"
+    elif days == 1:
+        return "Tomorrow"
+    elif -7 < days < 7:
+        return f"{abs(days)} days {'from now' if days > 0 else 'ago'}"
+
+    suffix = (
+        "th"
+        if 11 <= date.day <= 13
+        else {1: "st", 2: "nd", 3: "rd"}.get(date.day % 10, "th")
+    )
+    formatted_date = date.strftime(f"%A, %B {date.day}{suffix} %I:%M %p")
+    return formatted_date.lstrip("0").replace(" 0", " ")
