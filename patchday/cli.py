@@ -1,10 +1,8 @@
-import json
 import sys
 
 import click
 from typing import TYPE_CHECKING
 
-import rich
 
 import patchday
 from patchday._click_ext import (
@@ -14,7 +12,8 @@ from patchday._click_ext import (
     prompt_for_quantity,
     schedule_option,
 )
-from patchday.schedule import HormoneSchedule
+from patchday.date import format_date
+from patchday.exceptions import ScheduleNotExistsError
 from patchday.tui import launch_app
 
 if TYPE_CHECKING:
@@ -28,12 +27,6 @@ def app(ctx):
         return
 
     launch_app()
-    # schedules_list = list(patchday.schedules)
-    # if len(schedules_list) > 0:
-    #     _output_schedules(schedules_list)
-    #
-    # else:
-    #     click.echo("Hi! Want to manage your HRT using PatchDay?")
 
 
 @app.group()
@@ -50,27 +43,34 @@ def sites():
     """
 
 
-@app.command()
-def schedules():
+@app.group(invoke_without_command=True)
+def schedule():
+    """
+    manage schedules
+    """
+    if sys.argv[-1] == "schedule":
+        _list_schedules()
+
+
+@schedule.command("list")
+def _list():
     """
     list schedules
     """
-    if schedules_list := list(patchday.schedules):
-        _output_schedules(schedules_list)
-    else:
-        click.echo("No schedules yet! Add one using the `create` method.")
+    _list_schedules()
 
 
-def _output_schedules(schedules_list: list["HormoneSchedule"]):
-    schedules_dict = {}
-    for schedule in schedules_list:
-        schedules_dict[schedule.schedule_id] = schedule.model_dump()
+def _list_schedules():
+    for sched in list(patchday.schedules):
+        if exp_date := sched.next_expired_hormone.expiration_date:
+            suffix = format_date(exp_date)
+        else:
+            suffix = "not taken yet"
 
-    json_str = json.dumps(schedules_dict, indent=2)
-    rich.print(json_str)
+        click.echo(f"{sched.delivery_method.value} - {suffix}")
 
 
-@app.command()
+@schedule.command()
 @schedule_option(help="name of the new schedule")
 @delivery_method_option(prompt=True)
 @expiration_option(prompt=True, default="3d12h")
@@ -105,3 +105,17 @@ def create(
 
     if delivery_method is DeliveryMethod.PATCH:
         click.echo(f"\tnumber of patches: {quantity}")
+
+
+@schedule.command()
+@click.argument("schedule_id", required=False)
+def remove(schedule_id):
+    """
+    delete a schedule
+    """
+    try:
+        patchday.schedules.remove_schedule(schedule_id)
+    except ScheduleNotExistsError as err:
+        raise click.UsageError(f"{err}")
+
+    click.echo(f"Successfully remove schedule '{schedule_id}'")

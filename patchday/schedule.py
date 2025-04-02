@@ -1,9 +1,10 @@
 from collections.abc import Iterator
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, computed_field
 
+from patchday.exceptions import ScheduleNotExistsError
 from patchday.models import Hormone
 from patchday.storage import ManagedData
 from patchday.types import DeliveryMethod, ExpirationDuration, ScheduleID
@@ -54,6 +55,14 @@ class ScheduleManager(Manager):
     @cached_property
     def db(self) -> ManagedData:
         return self.patchdata.open(self._DB_KEY)
+
+    def get(self, schedule_id: ScheduleID) -> Optional["HormoneSchedule"]:
+        schedules = self.get_schedules()
+        for schedule in schedules:
+            if schedule.schedule_id == schedule_id:
+                return schedule
+
+        return None
 
     def get_schedules(self) -> list["HormoneSchedule"]:
         """
@@ -106,7 +115,13 @@ class ScheduleManager(Manager):
             quantity=quantity,
             patchdata=self.patchdata,
         )
-        self.db.persist_list_object(new_schedule)
+        self.db.persist_list_object(new_schedule, id_key="schedule_id")
+
+    def remove_schedule(self, schedule_id: ScheduleID):
+        if not (schedule := self.get(schedule_id)):
+            raise ScheduleNotExistsError(schedule_id)
+
+        self.db.delete_list_object(schedule)
 
 
 class HormoneSchedule(BaseModel):

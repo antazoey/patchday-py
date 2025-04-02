@@ -80,15 +80,25 @@ class ManagedData:
         _write_data(self.path, data)
 
     def persist_list_object(self, item: BASEMODEL_T, id_key: str = "id"):
-        items: list[dict] = _load_file(self.path, self.key, [])
+        items = self._load_items_without(item, id_key=id_key)
         data = item.model_dump(mode="json")
+        items.append(data)
+        _write_data(self.path, items)
+
+    def delete_list_object(self, item: BASEMODEL_T, id_key: str = "id"):
+        items = self._load_items_without(item, id_key=id_key)
+        _write_data(self.path, items)
+
+    def _load_items_without(
+        self, item: BASEMODEL_T, id_key: str = "id"
+    ) -> list[BASEMODEL_T]:
+        items: list[dict] = _load_file(self.path, self.key, [])
 
         # Remove existing.
         if existing := [x for x in items if x[id_key] == getattr(item, id_key)]:
             items = [x for x in items if x not in existing]
 
-        items.append(data)
-        _write_data(self.path, items)
+        return items
 
     def persist_object(self, item: BASEMODEL_T):
         _write_data_model(self.path, item)
