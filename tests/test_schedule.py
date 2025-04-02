@@ -19,10 +19,12 @@ def patches_db(mocker, mock_data):
 
 
 def create_patch(idx) -> Hormone:
-    return Hormone(
-        delivery_method=DeliveryMethod.PATCH,
-        expiration_duration="3d12h",
-        hormone_id=idx,
+    return Hormone.model_validate(
+        {
+            "delivery_method": DeliveryMethod.PATCH,
+            "expiration_duration": "3d12h",
+            "hormone_id": idx,
+        }
     )
 
 
@@ -85,6 +87,11 @@ class TestHormoneSchedule:
         schedule.take_next_hormone()
         assert next_hormone.date_applied is not None
 
+        # Inactive are seen as "next".
+        new_next_hormone = schedule.next_expired_hormone
+        assert new_next_hormone != next_hormone
+        assert not new_next_hormone.date_applied
+
         # Ensure all hormones are activated.
         schedule.take_next_hormone()
         schedule.take_next_hormone()
@@ -93,3 +100,8 @@ class TestHormoneSchedule:
         assert len(schedule.active_hormones) == 3
         assert schedule.next_expired_hormone.active
         assert schedule.next_expired_hormone.expiration_date is not None
+
+        next_hormone = schedule.next_expired_hormone
+        latest_hormone = schedule.last_taken_hormone
+        schedule.take_next_hormone()
+        assert schedule.last_taken_hormone != latest_hormone

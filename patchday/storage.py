@@ -34,7 +34,7 @@ def _load_file(file: Path, key: str, default: T) -> T:
 
 
 def _write_data_model(file: Path, model: BASEMODEL_T) -> None:
-    data = model.model_validate_json()
+    data = model.model_dump_json()
     _write_data_str(file, data)
 
 
@@ -79,9 +79,14 @@ class ManagedData:
         data = [itm.model_dump(mode="json") for itm in items]
         _write_data(self.path, data)
 
-    def persist_list_object(self, item: BASEMODEL_T):
+    def persist_list_object(self, item: BASEMODEL_T, id_key: str = "id"):
         items = _load_file(self.path, self.key, [])
         data = item.model_dump(mode="json")
+
+        # Remove existing.
+        if existing := [x for x in items if x[id_key] == getattr(item, id_key)]:
+            items = [x for x in items if x not in existing]
+
         items.append(data)
         _write_data(self.path, items)
 

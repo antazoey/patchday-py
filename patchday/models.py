@@ -74,6 +74,17 @@ class Hormone(BaseModel):
     The ID of the schedule this hormone belongs to.
     """
 
+    def __lt__(self, other: "Hormone") -> bool:
+        expiration_date = self.expiration_date
+        other_expiration_date = other.expiration_date
+        if not other_expiration_date:
+            return False
+
+        elif not expiration_date:
+            return True
+
+        return expiration_date.__lt__(other_expiration_date)
+
     @property
     def active(self) -> bool:
         """

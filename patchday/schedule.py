@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -23,16 +24,28 @@ class ScheduleManager(Manager):
         self._max_schedules = max_schedules
         super().__init__(patchdata)
 
-    def __iter__(self) -> "HormoneSchedule":
+    def __iter__(self) -> Iterator["HormoneSchedule"]:
         yield from self.get_schedules()
 
-    def __add__(self, other: dict) -> "HormoneSchedule":
+    def __add__(self, other: dict) -> "ScheduleManager":
         if not isinstance(other, dict):
             raise TypeError(
                 f"Cannot add {type(self).__name__} to {type(other).__name__}"
             )
 
         self.create_schedule(**other)
+        return self
+
+    def __getitem__(self, schedule_id: ScheduleID | int) -> "HormoneSchedule":
+        schedules = self.get_schedules()
+        if isinstance(schedule_id, int):
+            return schedules[schedule_id]
+
+        for schedule in schedules:
+            if schedule.id == schedule_id:
+                return schedule
+
+        raise KeyError(f"No such schedule: {schedule_id}")
 
     def _repr_pretty_(self, prt, cycle):
         for schedule in self.get_schedules():
@@ -126,7 +139,7 @@ class HormoneSchedule(BaseModel):
     """
 
     def __init__(self, **kwargs):
-        patchdata: "PatchData" = kwargs.pop("patchdata")
+        patchdata = kwargs.pop("patchdata")
         super().__init__(**kwargs)
         self._patchdata = patchdata
 
@@ -147,7 +160,8 @@ class HormoneSchedule(BaseModel):
     def db(self) -> ManagedData:
         return self._patchdata.open(self._db_key)
 
-    @computed_field
+    @computed_field  # type: ignore
+    @property
     def hormones(self) -> list[Hormone]:
         existing_list = self.db.load_list(
             Hormone, expiration_duration=self.expiration_duration
@@ -176,14 +190,16 @@ class HormoneSchedule(BaseModel):
             # Any inactive hormone is considered most last (and most next).
             return inactive_hormone[0]
 
-        return min(self.active_hormones, key=lambda h: h.expiration_date)
+        return min(self.active_hormones)
+
+    @property
+    def last_taken_hormone(self) -> Hormone | None:
+        return max(self.active_hormones)
 
     def take_next_hormone(self):
         hormone = self.next_expired_hormone
         hormone.apply()
-        hormones = [h for h in self.hormones if h != hormone]
-        hormones.append(hormone)
-        self.db.persist_list(hormones)
+        self.db.persist_list_object(hormone, id_key="hormone_id")
 
     def _validate_hormones(self, existing_list: list[Hormone]):
         existing_size = len(existing_list)
@@ -212,7 +228,7 @@ class HormoneSchedule(BaseModel):
         # Don't fear this number getting too big or worrying about gaps in IDs, it
         # doesn't really matter.
         max_id = (
-            max(existing_list, lambda h: h.hormone_id).hormone_id
+            max(existing_list, key=lambda h: h.hormone_id).hormone_id
             if existing_list
             else 0
         )

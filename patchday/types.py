@@ -39,7 +39,7 @@ class ExpirationDuration(RootModel[int]):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_expiration_duration(cls, value: int | str) -> "ExpirationDuration":
+    def validate_expiration_duration(cls, value: int | str) -> int:
         if isinstance(value, str):
             return parse_duration(value)
         elif isinstance(value, int):

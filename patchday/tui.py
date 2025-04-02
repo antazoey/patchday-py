@@ -10,11 +10,16 @@ if TYPE_CHECKING:
     from patchday.schedule import HormoneSchedule
 
 
-class ScheduleContainer(Widget):
+class BaseWidget(Widget):
+    def update_peer(self, selector_id: str, *args, **kwargs):
+        self.query_one(f"#{selector_id}").update(*args, **kwargs)  # type: ignore
+
+
+class ScheduleContainer(BaseWidget):
     schedule: "HormoneSchedule"
 
     @classmethod
-    def from_schedule(cls, schedule: "HormoneSchedule") -> "HormoneSchedule":
+    def from_schedule(cls, schedule: "HormoneSchedule") -> "ScheduleContainer":
         instance = cls()
         instance.schedule = schedule
         return instance
@@ -29,14 +34,14 @@ class ScheduleContainer(Widget):
             # Not the right button pressed.
             return
 
-        self.schedule.take_next_hormone()
-        status_text = self.get_next_expiration_status()
-        self.query_one("#take_label").update(status_text)
+        self.handle_take_button_pressed()
 
     def get_next_expiration_status(self) -> str:
-        if next_exp := self.schedule.next_expired_hormone:
-            if exp_date := next_exp.expiration_date:
-                return f"Next expired: {exp_date}"
+        next_hormone = self.schedule.next_expired_hormone
+        if exp_date := next_hormone.expiration_date:
+            if last_taken := self.schedule.last_taken_hormone:
+                if last_taken_date := last_taken.date_applied:
+                    return f"Last taken: {last_taken_date}\nNext expiration: {exp_date}"
 
         return "Not yet taken!"
 
@@ -46,6 +51,8 @@ class ScheduleContainer(Widget):
 
     def handle_take_button_pressed(self):
         self.schedule.take_next_hormone()
+        status_text = self.get_next_expiration_status()
+        self.update_peer("take_label", status_text)
 
 
 class PatchDay(App):
